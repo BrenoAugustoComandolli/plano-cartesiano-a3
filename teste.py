@@ -3,6 +3,8 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 from PIL import Image, ImageTk
+import numpy as np
+import math
 
 class PlanoCartesianoApp:
     def __init__(self, root):
@@ -10,6 +12,7 @@ class PlanoCartesianoApp:
         self.root.title("Calculadora de Plano Cartesiano")
         
         self.dark_mode = tk.BooleanVar(value=True)
+        self.ponto_medio = None
         
         self.tela = ttk.Frame(self.root, padding="20")
         self.tela.grid(column=0, row=0, sticky=(tk.W, tk.E, tk.N, tk.S))
@@ -44,6 +47,18 @@ class PlanoCartesianoApp:
         self.botao_plotar = ttk.Button(self.tela, text="Gerar Gráfico", command=self.criar_grafico)
         self.botao_plotar.grid(column=0, row=5, columnspan=2, sticky=(tk.W, tk.E), pady=[10, 0])
         
+        self.botao_ponto_medio = ttk.Button(self.tela, text="Calcular Ponto Médio", command=self.calcular_ponto_medio)
+        self.botao_ponto_medio.grid(column=0, row=8, columnspan=1, sticky=(tk.W, tk.E), pady=[0, 0])
+
+        self.botao_regressao_linear = ttk.Button(self.tela, text="Regressão Linear", command=self.regressao_linear)
+        self.botao_regressao_linear.grid(column=1, row=8, columnspan=1, sticky=(tk.W, tk.E), pady=[0, 0])
+
+        self.botao_distancia = ttk.Button(self.tela, text="Calcular Distância", command=self.calcular_distancia)
+        self.botao_distancia.grid(column=0, row=9, columnspan=1, sticky=(tk.W, tk.E), pady=[0, 0])
+
+        self.botao_inclinacao = ttk.Button(self.tela, text="Calcular Inclinação", command=self.calcular_inclinacao)
+        self.botao_inclinacao.grid(column=1, row=9, columnspan=1, sticky=(tk.W, tk.E), pady=[0, 0])
+
         dark_ativado = Image.open("assets/dark-ativado.png")
         dark_ativado = dark_ativado.resize((20, 20))
         self.dark_ativado = ImageTk.PhotoImage(dark_ativado)
@@ -80,6 +95,9 @@ class PlanoCartesianoApp:
             messagebox.showinfo("Erro", "Adicione pelo menos dois pontos.")
             return
         
+        ponto_medio_x = sum(pontos_x) / len(pontos_x)
+        ponto_medio_y = sum(pontos_y) / len(pontos_y)
+        
         limites_x = [min(pontos_x) - 1, max(pontos_x) + 1]
         limites_y = [min(pontos_y) - 1, max(pontos_y) + 1]
         
@@ -89,6 +107,7 @@ class PlanoCartesianoApp:
         plt.figure()
         plt.scatter(pontos_x, pontos_y, color='red', label='Pontos')
         plt.plot(pontos_x, pontos_y, color='green', label='Linhas')
+        
         plt.xlabel('Eixo X', color='white' if self.dark_mode.get() else 'black')
         plt.ylabel('Eixo Y', color='white' if self.dark_mode.get() else 'black')
         plt.title('Plano Cartesiano', color='white' if self.dark_mode.get() else 'black')
@@ -102,6 +121,33 @@ class PlanoCartesianoApp:
         
         plt.legend()
         plt.show()
+
+    def plotar_grafico(self, pontos_x, pontos_y):
+        limites_x = [min(pontos_x) - 1, max(pontos_x) + 1]
+        limites_y = [min(pontos_y) - 1, max(pontos_y) + 1]
+
+        plt.style.use('dark_background' if self.dark_mode.get() else 'default')
+
+        plt.figure()
+        plt.scatter(pontos_x, pontos_y, color='red', label='Pontos')
+        plt.plot(pontos_x, pontos_y, color='green', label='Linhas')
+
+        if self.ponto_medio:
+            plt.scatter([self.ponto_medio[0]], [self.ponto_medio[1]], color='blue', label='Ponto Médio', zorder=5)
+
+        plt.xlabel('Eixo X', color='white' if self.dark_mode.get() else 'black')
+        plt.ylabel('Eixo Y', color='white' if self.dark_mode.get() else 'black')
+        plt.title('Plano Cartesiano', color='white' if self.dark_mode.get() else 'black')
+        plt.grid(True, color='gray')
+
+        plt.axhline(0, color='white' if self.dark_mode.get() else 'black', linewidth=0.5)
+        plt.axvline(0, color='white' if self.dark_mode.get() else 'black', linewidth=0.5)
+
+        plt.xlim(limites_x)
+        plt.ylim(limites_y)
+
+        plt.legend()
+        plt.show()    
 
     def aplicar_dark_mode(self, widget):
         widget.tk_setPalette(background='#2e2e2e', foreground='white', activeBackground='#3e3e3e', activeForeground='white')
@@ -136,6 +182,162 @@ class PlanoCartesianoApp:
             self.botao_modo.configure(text='', image=self.dark_ativado, compound=tk.LEFT)
             self.aplicar_dark_mode(self.root)
             self.dark_mode.set(True)
+
+    def calcular_ponto_medio(self):
+        selected_items = self.treeview.selection()
+        if len(selected_items) != 2:
+            messagebox.showinfo("Erro", "Selecione exatamente dois pontos.")
+            return
+
+        ponto1 = self.treeview.item(selected_items[0], "values")
+        ponto2 = self.treeview.item(selected_items[1], "values")
+
+        x1, y1 = float(ponto1[0]), float(ponto1[1])
+        x2, y2 = float(ponto2[0]), float(ponto2[1])
+
+        ponto_medio_x = (x1 + x2) / 2
+        ponto_medio_y = (y1 + y2) / 2
+
+        self.ponto_medio = (ponto_medio_x, ponto_medio_y)
+
+        messagebox.showinfo("Ponto Médio", f"O ponto médio é ({ponto_medio_x:.2f}, {ponto_medio_y:.2f})")
+
+        self.plotar_grafico([x1, x2], [y1, y2])
+
+    def regressao_linear(self):
+        pontos_x = []
+        pontos_y = []
+        
+        for item in self.treeview.get_children():
+            valores = self.treeview.item(item, "values")
+            pontos_x.append(float(valores[0]))
+            pontos_y.append(float(valores[1]))
+
+        if len(pontos_x) < 2 or len(pontos_y) < 2:
+            messagebox.showinfo("Erro", "Adicione pelo menos dois pontos.")
+            return
+        
+        coef = np.polyfit(pontos_x, pontos_y, 1)
+        poly1d_fn = np.poly1d(coef)
+        
+        limites_x = [min(pontos_x) - 1, max(pontos_x) + 1]
+        limites_y = [min(pontos_y) - 1, max(pontos_y) + 1]
+        
+        # Pontos extremos para a linha de regressão
+        x_extremes = np.array([limites_x[0] - 100000, limites_x[1] + 100000])  # Extend the line further
+        y_extremes = poly1d_fn(x_extremes)
+        
+        plt.style.use('dark_background' if self.dark_mode.get() else 'default')
+        
+        plt.figure()
+        plt.scatter(pontos_x, pontos_y, color='red', label='Pontos')
+        plt.plot(x_extremes, y_extremes, color='blue', label='Linha de Regressão Linear')
+        plt.xlabel('Eixo X', color='white' if self.dark_mode.get() else 'black')
+        plt.ylabel('Eixo Y', color='white' if self.dark_mode.get() else 'black')
+        plt.title('Regressão Linear', color='white' if self.dark_mode.get() else 'black')
+        plt.grid(True, color='gray')
+        
+        plt.axhline(0, color='white' if self.dark_mode.get() else 'black', linewidth=0.5)
+        plt.axvline(0, color='white' if self.dark_mode.get() else 'black', linewidth=0.5)
+        
+        plt.legend()
+        plt.xlim(limites_x)
+        plt.ylim(limites_y)
+        plt.show()
+
+    def calcular_distancia(self):
+        selected_items = self.treeview.selection()
+        if len(selected_items) != 2:
+            messagebox.showinfo("Erro", "Selecione exatamente dois pontos.")
+            return
+
+        ponto1 = self.treeview.item(selected_items[0], "values")
+        ponto2 = self.treeview.item(selected_items[1], "values")
+
+        x1, y1 = float(ponto1[0]), float(ponto1[1])
+        x2, y2 = float(ponto2[0]), float(ponto2[1])
+
+        distancia = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+        messagebox.showinfo("Distância", f"A distância entre os pontos é {distancia:.2f}")
+
+        # Adicionando a linha representando a distância no gráfico
+        plt.style.use('dark_background' if self.dark_mode.get() else 'default')
+
+        plt.figure()
+
+        pontos_x = [x1, x2]
+        pontos_y = [y1, y2]
+
+        limites_x = [min(pontos_x) - 1, max(pontos_x) + 1]
+        limites_y = [min(pontos_y) - 1, max(pontos_y) + 1]
+
+        plt.scatter(pontos_x, pontos_y, color='red', label='Pontos')
+        plt.plot(pontos_x, pontos_y, color='blue', linestyle='--', label='Distância')
+        plt.xlabel('Eixo X', color='white' if self.dark_mode.get() else 'black')
+        plt.ylabel('Eixo Y', color='white' if self.dark_mode.get() else 'black')
+        plt.title('Distância', color='white' if self.dark_mode.get() else 'black')
+        plt.grid(True, color='gray')
+
+        plt.axhline(0, color='white' if self.dark_mode.get() else 'black', linewidth=0.5)
+        plt.axvline(0, color='white' if self.dark_mode.get() else 'black', linewidth=0.5)
+
+        plt.legend()
+        plt.xlim(limites_x)
+        plt.ylim(limites_y)
+        plt.show()
+
+
+    def calcular_inclinacao(self):
+        selected_items = self.treeview.selection()
+        if len(selected_items) != 2:
+            messagebox.showinfo("Erro", "Selecione exatamente dois pontos.")
+            return
+
+        ponto1 = self.treeview.item(selected_items[0], "values")
+        ponto2 = self.treeview.item(selected_items[1], "values")
+
+        x1, y1 = float(ponto1[0]), float(ponto1[1])
+        x2, y2 = float(ponto2[0]), float(ponto2[1])
+
+        if x1 == x2:
+            messagebox.showinfo("Inclinação", "A inclinação é indefinida (reta vertical).")
+        else:
+            inclinacao = (y2 - y1) / (x2 - x1)
+            messagebox.showinfo("Inclinação", f"A inclinação da reta é {inclinacao:.2f}")
+
+            # Adicionando a linha representando a inclinação no gráfico
+            plt.style.use('dark_background' if self.dark_mode.get() else 'default')
+
+            plt.figure()
+
+            pontos_x = [x1, x2]
+            pontos_y = [y1, y2]
+
+            limites_x = [min(pontos_x) - 1, max(pontos_x) + 1]
+            limites_y = [min(pontos_y) - 1, max(pontos_y) + 1]
+
+            coef = np.polyfit(pontos_x, pontos_y, 1)
+            poly1d_fn = np.poly1d(coef)
+
+            # Pontos extremos para a linha de regressão
+            x_extremes = np.array([limites_x[0] - 100000, limites_x[1] + 100000])  # Use os limites reais de x
+            y_extremes = poly1d_fn(x_extremes)
+
+            plt.scatter(pontos_x, pontos_y, color='red', label='Pontos')
+            plt.plot(x_extremes, y_extremes, color='orange', linestyle='--', label='Inclinação')
+            plt.xlabel('Eixo X', color='white' if self.dark_mode.get() else 'black')
+            plt.ylabel('Eixo Y', color='white' if self.dark_mode.get() else 'black')
+            plt.title('Inclinação', color='white' if self.dark_mode.get() else 'black')
+            plt.grid(True, color='gray')
+
+            plt.axhline(0, color='white' if self.dark_mode.get() else 'black', linewidth=0.5)
+            plt.axvline(0, color='white' if self.dark_mode.get() else 'black', linewidth=0.5)
+
+            plt.legend()
+            plt.xlim(limites_x)
+            plt.ylim(limites_y)
+            plt.show()
+
 
 if __name__ == "__main__":
     root = tk.Tk()
